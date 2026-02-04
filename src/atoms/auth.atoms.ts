@@ -40,6 +40,18 @@ export const currentAccountAtom = atom((get) => {
 
 export const signerAtom = atom<NIP07Signer | NIP46RemoteSigner | null>(null)
 
+export const isAutoLoginAtom = atom(false)
+
+async function checkAutoLogin() {
+  const maybeUserPk = await (window as any).nostr?.peekPublicKey?.()
+  if (maybeUserPk) {
+    store.set(isAutoLoginAtom, true)
+    store.set(loginAtom, { pubkey: maybeUserPk, signer: { name: 'nip07' } })
+  }
+}
+
+checkAutoLogin()
+
 observe((get, set) => {
   const account = get(selectedAccountAtom)
   if (account?.signer) {
@@ -96,6 +108,9 @@ export const loginAtom = atom(null, (get, set, account: Account) => {
 })
 
 export const logoutAtom = atom(null, (get, set) => {
+  if (get(isAutoLoginAtom)) {
+    return
+  }
   const state = get(authAtom)
   if (!state.selected) {
     return

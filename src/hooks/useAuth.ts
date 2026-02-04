@@ -1,9 +1,21 @@
-import { authAtom, currentAccountAtom, loginAtom, logoutAtom, selectedPubkeyAtom, signerAtom } from '@/atoms/auth.atoms'
+import {
+  authAtom,
+  currentAccountAtom,
+  isAutoLoginAtom,
+  loginAtom,
+  logoutAtom,
+  selectedPubkeyAtom,
+  signerAtom,
+} from '@/atoms/auth.atoms'
 import { useAtomValue, useSetAtom } from 'jotai'
 import { useUserState } from './state/useUser'
 
 export function useAuth() {
   return useAtomValue(authAtom)
+}
+
+export function useIsAutoLogin() {
+  return useAtomValue(isAutoLoginAtom)
 }
 
 export function useCurrentPubkey() {
