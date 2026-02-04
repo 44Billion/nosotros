@@ -1,7 +1,7 @@
 import { Divider } from '@/components/ui/Divider/Divider'
 import { MenuItem } from '@/components/ui/MenuItem/MenuItem'
 import { Stack } from '@/components/ui/Stack/Stack'
-import { useCurrentPubkey } from '@/hooks/useAuth'
+import { useCurrentPubkey, useIsAutoLogin } from '@/hooks/useAuth'
 import { spacing } from '@/themes/spacing.stylex'
 import { IconServerBolt, IconSettings, IconUser } from '@tabler/icons-react'
 import { Link } from '@tanstack/react-router'
@@ -15,6 +15,7 @@ type Props = {
 
 export const ProfilePopoverMenu = (props: Props) => {
   const pubkey = useCurrentPubkey()
+  const isAutoLogin = useIsAutoLogin()
   const iconProps = {
     size: 24,
     strokeWidth: '1.8',
@@ -37,8 +38,12 @@ export const ProfilePopoverMenu = (props: Props) => {
       <Link to='/settings'>
         <MenuItem size='sm' leadingIcon={<IconSettings {...iconProps} />} onClick={props.onAction} label='Settings' />
       </Link>
-      <Divider />
-      <SidebarMenuLogout size='sm' />
+      {!isAutoLogin && (
+        <>
+          <Divider />
+          <SidebarMenuLogout size='sm' />
+        </>
+      )}
     </Stack>
   )
 }
