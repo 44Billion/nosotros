@@ -1,6 +1,6 @@
 import { settingsAtom } from '@/atoms/settings.atoms'
 import { store } from '@/atoms/store'
-import type { Kind } from '@/constants/kinds'
+import { Kind } from '@/constants/kinds'
 import { FALLBACK_RELAYS } from '@/constants/relays'
 import { mergeRelayHints } from '@/core/mergers/mergeRelayHints'
 import type { RelayHints } from '@/core/types'
@@ -10,13 +10,15 @@ import { decodeNIP19, decodeRelays, decodeToFilter, nip19ToRelayHints } from '@/
 import type { UseQueryOptions } from '@tanstack/react-query'
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import type { Filter } from 'nostr-tools'
-import { defaultIfEmpty, firstValueFrom, from, mergeMap, shareReplay, takeUntil, tap, timer } from 'rxjs'
+import { isAddressableKind, isReplaceableKind } from 'nostr-tools/kinds'
+import { defaultIfEmpty, firstValueFrom, from, mergeMap, shareReplay, tap } from 'rxjs'
 import { batcher } from '../batchers'
+import { createTrustedListModule } from '../modules/createTrustedListModule'
 import { subscribeMediaStats } from '../subscriptions/subscribeMediaStats'
 import { subscribeStrategy } from '../subscriptions/subscribeStrategy'
 import { queryClient } from './queryClient'
 import { eventIdToQueryKey, pointerToQueryKey, queryKeys } from './queryKeys'
-import { setEventData } from './queryUtils'
+import { dedupeEvents, setEventData } from './queryUtils'
 
 export type UseQueryOptionsWithFilter<Selector = NostrEventDB[]> = UseQueryOptions<NostrEventDB[], Error, Selector> & {
   ctx?: NostrContext
@@ -33,20 +35,25 @@ export function createEventQueryOptions<Selector = NostrEventDB[]>(options: UseQ
     queryFn: async () => {
       const { maxRelaysPerUser } = store.get(settingsAtom)
       const filters = 'filter' in options ? [options.filter] : options.filters
+      const shouldDedupe = filters.some((filter) =>
+        (filter.kinds || []).some((kind) => isReplaceableKind(kind) || isAddressableKind(kind)),
+      )
 
       const stream = from(filters).pipe(
-        mergeMap((filter) => subscribeStrategy({ ...ctx, maxRelaysPerUser }, filter)),
+        mergeMap((filter) => subscribeStrategy({ ...ctx, maxRelaysPerUser, queryKey: opts.queryKey }, filter)),
         tap((res) => res.forEach(setEventData)),
         tap((res) => {
           if (res) {
             queryClient.setQueryData(opts.queryKey, (old: NostrEventDB[] = []) => {
+              if (shouldDedupe) {
+                return dedupeEvents([...old, ...res])
+              }
               const ids = new Set(old.map((x) => x.id))
               return [...old, ...res.filter((x) => !ids.has(x.id))]
             })
           }
         }),
         subscribeMediaStats(),
-        takeUntil(timer(6500)),
         shareReplay(),
         defaultIfEmpty([] as NostrEventDB[]),
       )
@@ -88,6 +95,43 @@ export function replaceableEventQueryOptions<Selector = NostrEventDB>(
     ctx: {
       network: 'STALE_WHILE_REVALIDATE_BATCH',
       batcher,
+      ...options?.ctx,
+    },
+  })
+}
+
+export function trustedAssertionsQueryOptions<Selector = NostrEventDB>(
+  pubkey: string,
+  options?: CustomQueryOptions<Selector>,
+) {
+  return createEventQueryOptions<Selector>({
+    filter: {
+      kinds: [Kind.TrustedAssertionUser],
+      '#d': [pubkey],
+    },
+    queryKey: queryKeys.replaceable(Kind.TrustedAssertionUser, pubkey),
+    select: (events) => events[0] as Selector,
+    ...options,
+    ctx: {
+      network: 'STALE_WHILE_REVALIDATE_BATCH',
+      batcher,
+      ...options?.ctx,
+    },
+  })
+}
+
+export function trustedListQueryOptions<Selector = NostrEventDB>(
+  dTag?: string,
+  options?: CustomQueryOptions<Selector>,
+) {
+  const module = createTrustedListModule(dTag)
+  return createEventQueryOptions<Selector>({
+    filter: module.filter,
+    queryKey: module.queryKey,
+    select: (events) => events[0] as Selector,
+    ...options,
+    ctx: {
+      ...module.ctx,
       ...options?.ctx,
     },
   })
