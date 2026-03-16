@@ -1,6 +1,6 @@
 import { settingsAtom } from '@/atoms/settings.atoms'
 import { store } from '@/atoms/store'
-import { Kind } from '@/constants/kinds'
+import type { Kind } from '@/constants/kinds'
 import { FALLBACK_RELAYS } from '@/constants/relays'
 import { mergeRelayHints } from '@/core/mergers/mergeRelayHints'
 import type { RelayHints } from '@/core/types'
