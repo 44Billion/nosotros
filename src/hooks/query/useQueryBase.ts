@@ -13,7 +13,6 @@ import type { Filter } from 'nostr-tools'
 import { isAddressableKind, isReplaceableKind } from 'nostr-tools/kinds'
 import { defaultIfEmpty, firstValueFrom, from, mergeMap, shareReplay, tap } from 'rxjs'
 import { batcher } from '../batchers'
-import { createTrustedListModule } from '../modules/createTrustedListModule'
 import { subscribeMediaStats } from '../subscriptions/subscribeMediaStats'
 import { subscribeStrategy } from '../subscriptions/subscribeStrategy'
 import { queryClient } from './queryClient'
@@ -95,43 +94,6 @@ export function replaceableEventQueryOptions<Selector = NostrEventDB>(
     ctx: {
       network: 'STALE_WHILE_REVALIDATE_BATCH',
       batcher,
-      ...options?.ctx,
-    },
-  })
-}
-
-export function trustedAssertionsQueryOptions<Selector = NostrEventDB>(
-  pubkey: string,
-  options?: CustomQueryOptions<Selector>,
-) {
-  return createEventQueryOptions<Selector>({
-    filter: {
-      kinds: [Kind.TrustedAssertionUser],
-      '#d': [pubkey],
-    },
-    queryKey: queryKeys.replaceable(Kind.TrustedAssertionUser, pubkey),
-    select: (events) => events[0] as Selector,
-    ...options,
-    ctx: {
-      network: 'STALE_WHILE_REVALIDATE_BATCH',
-      batcher,
-      ...options?.ctx,
-    },
-  })
-}
-
-export function trustedListQueryOptions<Selector = NostrEventDB>(
-  dTag?: string,
-  options?: CustomQueryOptions<Selector>,
-) {
-  const module = createTrustedListModule(dTag)
-  return createEventQueryOptions<Selector>({
-    filter: module.filter,
-    queryKey: module.queryKey,
-    select: (events) => events[0] as Selector,
-    ...options,
-    ctx: {
-      ...module.ctx,
       ...options?.ctx,
     },
   })
