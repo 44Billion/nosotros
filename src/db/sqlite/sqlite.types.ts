@@ -61,4 +61,5 @@ export type SqliteMessages =
   | { method: 'countTags' }
   | { method: 'dbSize' }
   | { method: 'exportDB' }
+  | { method: 'clearDB' }
   | { method: 'deleteDB' }

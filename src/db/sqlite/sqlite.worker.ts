@@ -52,6 +52,18 @@ export class SqliteStorage {
     await deleteSQLiteFile(`/${this.name}`, pool)
   }
 
+  async clearDB() {
+    const db = await this.db
+    db.exec('DELETE FROM events')
+    db.exec('DELETE FROM events_fts')
+    db.exec('DELETE FROM tags')
+    db.exec('DELETE FROM relayStats')
+    db.exec('DELETE FROM relayInfo')
+    db.exec('DELETE FROM seen')
+    db.exec('DELETE FROM nip05')
+    db.exec('DELETE FROM users')
+  }
+
   async exportDB() {
     const db = await this.db
     const pool = await this.pool
@@ -200,6 +212,11 @@ async function onMessage(e: MessageEvent) {
     case 'exportDB': {
       const res = await store.exportDB()
       postMessage(msg, res)
+      break
+    }
+    case 'clearDB': {
+      await store.clearDB()
+      postMessage(msg, { success: true })
       break
     }
     case 'deleteDB': {

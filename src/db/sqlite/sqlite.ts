@@ -150,6 +150,10 @@ export class SqliteStorage {
     return await this.send<Uint8Array<ArrayBufferLike>>({ method: 'exportDB' })
   }
 
+  async clearDB() {
+    await this.send({ method: 'clearDB' })
+  }
+
   async deleteDB() {
     await this.send({ method: 'deleteDB' })
   }
