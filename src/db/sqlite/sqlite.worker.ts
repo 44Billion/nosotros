@@ -8,7 +8,7 @@ import { SqliteRelayInfo } from './relayInfo/sqlite.relayInfo'
 import { SqliteRelayStats } from './relayStats/sqlite.relayStats'
 import { SqliteSeen } from './seen/sqlite.seen'
 import { SqliteTags } from './tags/sqlite.tags'
-import { initializeSQLite } from './sqlite.schemas'
+import { deleteSQLiteFile, initializeSQLite } from './sqlite.schemas'
 import { SqliteStats } from './sqlite.stats'
 import type { NostrEventDB, SqliteMessages } from './sqlite.types'
 import { SqliteUsers } from './users/sqlite.users'
@@ -43,14 +43,13 @@ export class SqliteStorage {
 
   async deleteDB() {
     const db = await this.db
-    db.exec('DELETE FROM events')
-    db.exec('DELETE FROM events_fts')
-    db.exec('DELETE FROM tags')
-    db.exec('DELETE FROM relayStats')
-    db.exec('DELETE FROM relayInfo')
-    db.exec('DELETE FROM seen')
-    db.exec('DELETE FROM nip05')
-    db.exec('DELETE FROM users')
+    const pool = await this.pool
+
+    if (db.isOpen()) {
+      db.close()
+    }
+
+    await deleteSQLiteFile(`/${this.name}`, pool)
   }
 
   async exportDB() {
@@ -66,9 +65,7 @@ const DB_NAME = import.meta.env.VITE_DB_NAME
 const store = new SqliteStorage(DB_NAME)
 
 function insertUser(event: NostrEventDB) {
-  const userMetadata = event.metadata?.userMetadata as
-    | { name?: string; display_name?: string }
-    | undefined
+  const userMetadata = event.metadata?.userMetadata as { name?: string; display_name?: string } | undefined
   const name = userMetadata?.name?.trim() || undefined
   const display_name = userMetadata?.display_name?.trim() || undefined
   const resolvedName = (name || display_name || '').trim()
@@ -195,7 +192,7 @@ async function onMessage(e: MessageEvent) {
       postMessage(msg, res)
       break
     }
-    case 'dbSize ': {
+    case 'dbSize': {
       const bytes = store.stats.dbSizeBytes(db)
       postMessage(msg, bytes)
       break

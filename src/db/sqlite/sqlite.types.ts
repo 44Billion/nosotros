@@ -59,6 +59,6 @@ export type SqliteMessages =
   | { method: 'upsertUser'; params: UserDB }
   | { method: 'countEvents' }
   | { method: 'countTags' }
-  | { method: 'dbSize ' }
+  | { method: 'dbSize' }
   | { method: 'exportDB' }
   | { method: 'deleteDB' }

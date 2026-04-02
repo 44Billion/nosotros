@@ -143,7 +143,7 @@ export class SqliteStorage {
   }
 
   async dbSizeBytes() {
-    return this.send<number>({ method: 'dbSize ' })
+    return this.send<number>({ method: 'dbSize' })
   }
 
   async exportDB() {
